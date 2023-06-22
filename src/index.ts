@@ -51,3 +51,29 @@ app.get("/issues", async (req: Request, res: Response, next: NextFunction) => {
     if (typeof req.query.label === "string") {
       values.push(req.query.label);
       conditions.push(`label = $${values.length}`);
+    }
+
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
+    const offset = (page - 1) * limit;
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    values.push(limit, offset);
+
+    const sql = `SELECT * FROM issues ${whereClause} ORDER BY created_at DESC LIMIT $${values.length - 1} OFFSET $${values.length}`;
+    const result = await pool.query<IssueRow>(sql, values);
+    res.json({ page, limit, items: result.rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post("/issues", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const title = typeof req.body.title === "string" ? req.body.title.trim() : "";
+    const description = typeof req.body.description === "string" ? req.body.description : "";
+    const priority: IssuePriority = req.body.priority ?? "medium";
+    const label = typeof req.body.label === "string" ? req.body.label.trim() : "bug";
+
+    if (!title) throw new HttpError(400, "title is required");
+    if (!["low", "medium", "high"].includes(priority)) throw new HttpError(400, "invalid priority");
