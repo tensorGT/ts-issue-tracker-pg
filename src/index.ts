@@ -77,3 +77,30 @@ app.post("/issues", async (req: Request, res: Response, next: NextFunction) => {
 
     if (!title) throw new HttpError(400, "title is required");
     if (!["low", "medium", "high"].includes(priority)) throw new HttpError(400, "invalid priority");
+
+    const result = await pool.query<IssueRow>(
+      "INSERT INTO issues (title, description, priority, label) VALUES ($1, $2, $3, $4) RETURNING *",
+      [title, description, priority, label]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.patch("/issues/:id/status", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = Number(req.params.id);
+    const nextStatus = req.body.status as IssueStatus;
+    if (!Number.isInteger(id)) throw new HttpError(400, "invalid issue id");
+
+    const existing = await pool.query<IssueRow>("SELECT * FROM issues WHERE id = $1", [id]);
+    if (existing.rows.length === 0) throw new HttpError(404, "issue not found");
+
+    const currentStatus = existing.rows[0].status;
+    if (!ALLOWED_TRANSITIONS[currentStatus].includes(nextStatus)) {
+      throw new HttpError(400, `cannot move from ${currentStatus} to ${nextStatus}`);
+    }
+
+    const updated = await pool.query<IssueRow>("UPDATE issues SET status = $1 WHERE id = $2 RETURNING *", [
+      nextStatus,

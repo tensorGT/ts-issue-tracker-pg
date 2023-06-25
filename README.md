@@ -4,3 +4,5 @@ typed Express + PostgreSQL issue tracker with parameterized filtering, paginatio
 
 ## run
 ```bash
+npm install
+npm run build
