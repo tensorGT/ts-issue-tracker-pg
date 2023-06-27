@@ -104,3 +104,30 @@ app.patch("/issues/:id/status", async (req: Request, res: Response, next: NextFu
 
     const updated = await pool.query<IssueRow>("UPDATE issues SET status = $1 WHERE id = $2 RETURNING *", [
       nextStatus,
+      id,
+    ]);
+    res.json(updated.rows[0]);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  if (err instanceof HttpError) {
+    res.status(err.statusCode).json({ error: err.message });
+    return;
+  }
+  res.status(500).json({ error: err.message });
+});
+
+const port = Number(process.env.PORT) || 4001;
+const initSql = fs.readFileSync(path.join(__dirname, "../migrations/001_issues.sql"), "utf8");
+pool
+  .query(initSql)
+  .then(() => {
+    app.listen(port, () => console.log("issue-tracker-api on " + port));
+  })
+  .catch((err: Error) => {
+    console.error("db init failed:", err.message);
+    process.exit(1);
+  });

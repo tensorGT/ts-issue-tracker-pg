@@ -6,3 +6,5 @@ typed Express + PostgreSQL issue tracker with parameterized filtering, paginatio
 ```bash
 npm install
 npm run build
+npm start
+```

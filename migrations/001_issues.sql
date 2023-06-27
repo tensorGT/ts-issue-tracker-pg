@@ -5,3 +5,5 @@ CREATE TABLE IF NOT EXISTS issues (
   status VARCHAR(24) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'closed')),
   priority VARCHAR(16) NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
   label VARCHAR(40) NOT NULL DEFAULT 'bug',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
